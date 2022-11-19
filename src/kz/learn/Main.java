@@ -26,8 +26,10 @@ public class Main {
         for (int i = 0; i < 3; i++) {
             /**
              * Передаем задание каждому потоку (их у нас 3)
+             * Каждому потоку при создании Processor будем передавать id
+             * Все потоки будут с разными айдишками
              */
-            executorService.submit(new Processor(countDownLatch));
+            executorService.submit(new Processor(i, countDownLatch));
         }
 
         /**
@@ -37,26 +39,22 @@ public class Main {
          */
         executorService.shutdown();
 
-        /**
-         * Таким образом у нас в программе появляется 4 потока
-         * 3 потока - отсчитывают у CountDownLatch
-         * поток Main - будет ждать пока защелка откроется
-         * countDownLatch.await() - сauses the current thread to wait until the latch has counted down to zero, unless the thread is interrupted.
-         */
-        countDownLatch.await();
-
-        /**
-         * После того как защелка откроется, выводим сообщение
-         */
-        System.out.println("Latch has been opened, main thread is proceeding");
+        for (int i = 0; i < 3; i++) {
+            /**
+             * countDown() - метод отсчитывает назад заданный нами в конструкторе count
+             */
+            countDownLatch.countDown();
+        }
     }
 }
 
 class Processor implements Runnable {
 
-    private CountDownLatch countDownLatch;
+    private final int id;
+    private final CountDownLatch countDownLatch;
 
-    public Processor(CountDownLatch countDownLatch) {
+    public Processor(int id, CountDownLatch countDownLatch) {
+        this.id = id;
         this.countDownLatch = countDownLatch;
     }
 
@@ -69,8 +67,21 @@ class Processor implements Runnable {
         }
 
         /**
-         * countDown() - метод отсчитывает назад заданный нами в конструкторе count
+         * Теперь три потока будут ждать пока countDownLatch станет 0
+         * Как только countDownLatch будет равен 0
+         * countDownLatch.await() - откроет защелку
+         * И все три потока одновременно продолжат свое выполнение
          */
-        countDownLatch.countDown();
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        /**
+         * Как только защелка откроется все три потока выведут сообщение
+         * И мы увидим, что все три разных потока продолжили свое выполнение
+         */
+        System.out.println("Current thread with id: " + id + " proceeded.");
     }
 }
